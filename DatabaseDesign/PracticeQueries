@@ -1,0 +1,132 @@
+coaches_season:	cid, year, yr_order, firstname, lastname, season_win, season_loss, playoff_win, playoff_loss, tid
+
+teams:	tid, location, name, league
+
+players: ilkid, firstname, lastname, position, first_season, last_season, h_feet, h_inches, weight, college, birthday
+
+player_rs:	ilkid, year, firstname, lastname, tid, league, gp, minutes, pts, dreb, ored, reb, asts, stl, blk, turnover, pf, fga, fgm, fta, ftm, tpa, tpm
+
+player_rs_career:	ilkid, firstname, lastname, league, gp, minutes, pts, drep, oreb, reb, asts, stl, blk, turnover, pf, fga, fgm, fta, ftm, tpa, tpm
+
+draft:	draft_year, draft_round, selection, tid, firstname, lastname, ilkid, draft_from, league
+
+
+1.
+Find all the coaches who have coached exactly TWO teams. List their first names followed by their last names;
+
+SELECT
+firstname, 
+lastname
+FROM
+(SELECT 
+firstname, 
+lastname, 
+cid, 
+COUNT(tid) AS teamcount
+FROM
+(SELECT DISTINCT 
+firstname, 
+lastname, 
+tid, 
+cid
+FROM 
+coaches_season) AS Temp
+GROUP BY
+firstname,
+lastname,
+cid) AS Temp2
+WHERE 
+teamcount = 2
+ORDER BY 
+lastname;
+
+
+
+
+2.	
+Find all the players who played in a Boston team or a Denver team. List their first names only. 
+
+
+SELECT DISTINCT 
+Temp.firstname
+FROM	
+(SELECT DISTINCT 
+players.firstname,
+players.lastname,
+teams.location
+FROM 
+players, 
+teams, 
+player_rs
+WHERE 
+UPPER(player_rs.ilkid)=UPPER(players.ilkid)
+AND UPPER(player_rs.tid)=UPPER(teams.tid)
+AND (teams.location='Boston' 
+OR teams.location='Denver'))AS Temp;
+
+
+
+3.
+
+Find those who happened to be a coach and a player in the same team in the same season. List their first names, last names, the team where this happened, and the year(s) when this happened. 
+
+-- NOTE: Ordered by year to match with sample.out
+
+SELECT DISTINCT 
+coaches_season.firstname, 
+coaches_season.lastname, 
+coaches_season.year,
+teams.name
+FROM 
+coaches_season, 
+teams, 
+player_rs
+WHERE 
+UPPER(coaches_season.cid)=UPPER(player_rs.ilkid)
+AND coaches_season.tid=teams.tid
+AND player_rs.tid=teams.tid
+AND player_rs.year=coaches_season.year
+ORDER BY
+coaches_season.year;
+
+4. Find the average height (in centimeters) of each team coached by Phil Jackson in each season. Print the team name, season and the average height value (in centimeters), and sort the results by the average height. 
+
+
+-- NOTE: using 1 inch = 2.54cm conversion, decimal places to 4 digits
+-- ordered in DESC per sample.out
+
+SELECT
+name,
+year,
+round (CAST(h_cm_avg as numeric), 4) AS h_cm_avg
+
+
+FROM
+(SELECT 
+PJ_teams.name,
+player_rs.year,
+AVG((h_feet * 12 + h_inches) * 2.54) AS h_cm_avg
+FROM
+player_rs,
+players,
+teams,
+(SELECT
+teams.name,
+year,
+coaches_season.tid
+FROM
+coaches_season,
+teams
+WHERE
+teams.tid=coaches_season.tid
+AND coaches_season.cid='JACKSPH01') AS PJ_teams
+WHERE
+player_rs.year=PJ_teams.year
+AND player_rs.tid=PJ_teams.tid
+AND UPPER(players.ilkid)=UPPER(player_rs.ilkid)
+GROUP BY 
+player_rs.year,
+PJ_teams.name) AS h_sum
+ORDER BY
+h_cm_avg DESC;
+Find the coach(es) (first name and last name) who have coached the largest number of players in year 2003.
